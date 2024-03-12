@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web components</title>
+    <style>
+      hello-world {
+        color: blue;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <hello-world name="Mikael">
+      <h1 slot="msgtext">Hello Default!</h1>
+      <p>This text will become part of the component.</p>
+    </hello-world>
+
+    <!-- template for complex html -->
+    <template id="hello-world">
+      <style>
+        p {
+          text-align: center;
+          font-weight: normal;
+          padding: 0.5em;
+          margin: 1px 0;
+          background-color: #eee;
+          border: 1px solid #666;
+        }
+      </style>
+
+      <p class="hw-text"></p>
+      <p class="hw-text"></p>
+      <p class="hw-text"></p>
+    </template>
+
+    <form id="myform">
+      <input type="text" name="your-name" placeholder="name" />
+
+      <input-age name="your-age"></input-age>
+
+      <button>submit</button>
+    </form>
+  </body>
+
+  <script>
+    class HelloWorld extends HTMLElement {
+      constructor() {
+        super()
+        this.name = 'World'
+      }
+
+      // return an array of properties to observe
+      static get observedAttributes() {
+        return ['name']
+      }
+
+      // called when an observed attribute has been added, removed, updated, or replaced
+      attributeChangedCallback(property, oldValue, newValue) {
+        if (oldValue === newValue) return
+        this[property] = newValue
+      }
+
+      connectedCallback() {
+        // this.textContent = `Hello, ${this.name}!`
+
+        const shadow = this.attachShadow({ mode: 'closed' })
+        const template = document
+          .getElementById('hello-world')
+          .content.cloneNode(true)
+        const hwMsg = `Hello, ${this.name}!`
+
+        Array.from(template.querySelectorAll('.hw-text')).forEach(
+          (el, index) => {
+            el.textContent = `${hwMsg} ${index + 1}`
+          }
+        )
+
+        // append the template to the shadow DOM
+        shadow.appendChild(template)
+
+        // add event listener to the shadow root
+        shadow.addEventListener('click', () => {
+          console.log('Hello, World!')
+        })
+
+        // // [font-weight: normal;] will override the style in the head [font-weight: bold;]
+        // shadow.innerHTML = `
+        //   <style>
+        //     p {
+        //       text-align: center;
+        //       font-weight: normal;
+        //       padding: 1em;
+        //       margin: 0 0 2em 0;
+        //       background-color: #eee;
+        //       border: 1px solid #666;
+        //     }
+
+        //   </style>
+
+        //   <p>Hello ${this.name}!</p>
+        // `
+      }
+
+      // called when the element is removed from the DOM
+      disconnectedCallback() {
+        console.log('Goodbye, cruel world!')
+      }
+
+      // called when the element is moved from one document to another
+      adoptedCallback() {
+        console.log('I have been adopted!')
+      }
+    }
+
+    class InputAge extends HTMLElement {
+      constructor() {
+        super()
+        this.internals = this.attachInternals()
+        this.setValue('')
+      }
+
+      setValue(v) {
+        this.value = v
+        this.internals.setFormValue(v)
+      }
+
+      static formAssociated = true
+
+      formAssociatedCallback(form) {
+        console.log('form associated:', form.id)
+      }
+
+      connectedCallback() {
+        const shadow = this.attachShadow({ mode: 'closed' })
+
+        shadow.innerHTML = `
+          <style>input { width: 4em; }</style>
+          <input type="number" placeholder="age" min="18" max="120" />
+        `
+
+        // monitor input values
+        shadow.querySelector('input').addEventListener('input', (e) => {
+          this.setValue(e.target.value)
+        })
+      }
+    }
+
+    customElements.define('hello-world', HelloWorld)
+    customElements.define('input-age', InputAge)
+  </script>
+</html>
